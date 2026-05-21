@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WA Blast — Bulk Message Sender</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --green-deep:   #075E54;
+    --green-mid:    #128C7E;
+    --green-light:  #25D366;
+    --green-pale:   #dcf8c6;
+    --teal-soft:    #e9f9f0;
+    --white:        #ffffff;
+    --off-white:    #f7faf8;
+    --slate:        #4a5568;
+    --muted:        #8fa3a0;
+    --border:       #d4e8e4;
+    --red-soft:     #ffe4e4;
+    --red:          #e53e3e;
+    --shadow-sm:    0 1px 4px rgba(7,94,84,.08);
+    --shadow-md:    0 4px 20px rgba(7,94,84,.12);
+    --shadow-lg:    0 12px 40px rgba(7,94,84,.16);
+    --radius:       14px;
+    --radius-sm:    8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--off-white);
+    color: var(--slate);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 60% 40% at 80% -10%, rgba(37,211,102,.12) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 30% at -10% 80%, rgba(18,140,126,.10) 0%, transparent 70%);
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--green-deep);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(7,94,84,.3);
+  }
+  .header-inner {
+    max-width: 860px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 64px;
+  }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: var(--green-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(37,211,102,.3);
+  }
+  .logo-icon svg { width: 22px; height: 22px; }
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #fff;
+    letter-spacing: -.5px;
+  }
+  header h1 span { color: var(--green-light); }
+  .header-badge {
+    margin-left: auto;
+    background: rgba(37,211,102,.18);
+    border: 1px solid rgba(37,211,102,.35);
+    color: var(--green-light);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+
+  /* ── Main layout ── */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: box-shadow .2s;
+  }
+  .card:hover { box-shadow: var(--shadow-md); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, var(--teal-soft) 0%, var(--white) 100%);
+  }
+  .card-header-icon {
+    width: 34px; height: 34px;
+    border-radius: var(--radius-sm);
+    background: var(--green-mid);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .card-header-icon svg { width: 18px; height: 18px; color: #fff; }
+  .card-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--green-deep);
+  }
+  .card-header p {
+    font-size: .78rem;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .card-body { padding: 24px; }
+
+  /* ── Form elements ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-grid.full { grid-template-columns: 1fr; }
+  @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label {
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--green-deep);
+    letter-spacing: .02em;
+  }
+  .field label span { color: var(--muted); font-weight: 400; }
+
+  input[type=text], input[type=password], select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    color: var(--slate);
+    background: var(--off-white);
+    transition: border-color .2s, box-shadow .2s, background .2s;
+    outline: none;
+    -webkit-appearance: none;
+  }
+  input[type=text]:focus, input[type=password]:focus, select:focus {
+    border-color: var(--green-mid);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(18,140,126,.12);
+  }
+  select { cursor: pointer; }
+
+  /* ── Variable rows ── */
+  .var-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    background: var(--teal-soft);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+  }
+  .var-badge {
+    min-width: 28px; height: 28px;
+    background: var(--green-mid);
+    color: #fff;
+    border-radius: 50%;
+    font-size: .78rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .var-row input[type=text] { flex: 1; margin: 0; }
+  .var-type-toggle {
+    display: flex;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #fff;
+  }
+  .var-type-toggle label {
+    padding: 6px 12px;
+    font-size: .78rem;
+    cursor: pointer;
+    color: var(--muted);
+    transition: background .15s, color .15s;
+    white-space: nowrap;
+  }
+  .var-type-toggle input[type=radio] { display: none; }
+  .var-type-toggle input[type=radio]:checked + label {
+    background: var(--green-mid);
+    color: #fff;
+    font-weight: 500;
+  }
+  .var-value-input { flex: 1; }
+  .var-excel-hint {
+    font-size: .78rem;
+    color: var(--green-mid);
+    font-style: italic;
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(37,211,102,.08);
+    border-radius: var(--radius-sm);
+    border: 1.5px dashed var(--green-light);
+  }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    background: var(--off-white);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--green-light);
+    background: var(--teal-soft);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .upload-zone h3 { font-family: 'Syne', sans-serif; font-size: .95rem; color: var(--green-deep); margin-bottom: 4px; }
+  .upload-zone p { font-size: .8rem; color: var(--muted); }
+
+  /* ── Column mapping ── */
+  .mapping-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 18px;
+  }
+  @media (max-width: 500px) { .mapping-grid { grid-template-columns: 1fr; } }
+
+  /* ── Preview table ── */
+  .preview-wrap {
+    margin-top: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: auto;
+    max-height: 260px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+  }
+  thead th {
+    background: var(--green-deep);
+    color: #fff;
+    padding: 9px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  tbody tr:nth-child(even) { background: var(--teal-soft); }
+  tbody td { padding: 8px 14px; border-bottom: 1px solid var(--border); color: var(--slate); }
+  .contact-count {
+    margin-top: 10px;
+    font-size: .82rem;
+    color: var(--green-mid);
+    font-weight: 500;
+  }
+
+  /* ── Send button ── */
+  .send-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--green-mid) 0%, var(--green-light) 100%);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    letter-spacing: .03em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: opacity .2s, transform .1s, box-shadow .2s;
+    box-shadow: 0 4px 16px rgba(37,211,102,.35);
+  }
+  .send-btn:hover:not(:disabled) { opacity: .92; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(37,211,102,.4); }
+  .send-btn:active:not(:disabled) { transform: translateY(0); }
+  .send-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .send-btn svg { width: 22px; height: 22px; }
+
+  /* ── Progress ── */
+  .progress-card { display: none; }
+  .progress-card.active { display: block; }
+
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 99px;
+    height: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--green-mid), var(--green-light));
+    width: 0%;
+    transition: width .4s ease;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: .8rem;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-size: .82rem;
+    animation: fadeSlide .25s ease;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .log-item.success { background: var(--green-pale); color: #1a6b3c; }
+  .log-item.fail    { background: var(--red-soft);  color: var(--red); }
+  .log-item.pending { background: var(--teal-soft); color: var(--green-mid); }
+  .log-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .log-item.success .log-dot { background: var(--green-light); }
+  .log-item.fail    .log-dot { background: var(--red); }
+  .log-item.pending .log-dot { background: var(--green-mid); animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
+
+  .summary-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .summary-pill {
+    flex: 1;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+  }
+  .summary-pill.s { background: var(--green-pale); color: #1a6b3c; }
+  .summary-pill.f { background: var(--red-soft); color: var(--red); }
+  .summary-pill strong { display: block; font-size: 1.5rem; font-family: 'Syne', sans-serif; font-weight: 800; }
+  .summary-pill span { font-size: .75rem; font-weight: 500; }
+
+  /* ── Misc ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 18px 0;
+  }
+  .info-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(18,140,126,.07);
+    border-left: 3px solid var(--green-mid);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: .8rem;
+    color: var(--green-deep);
+    margin-top: 14px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+  /* ── Proxy selector ── */
+  .proxy-section {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+  .proxy-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .proxy-label-row label {
+    font-size: .8rem;
+    font-weight: 500;
+    color: var(--green-deep);
+  }
+  .proxy-status {
+    font-size: .75rem;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-weight: 600;
+  }
+  .proxy-status.ok  { background: var(--green-pale); color: #1a6b3c; }
+  .proxy-status.warn{ background: #fff3cd; color: #856404; }
+  .proxy-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px;
+  }
+  .proxy-opt {
+    position: relative;
+  }
+  .proxy-opt input[type=radio] { display: none; }
+  .proxy-opt label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: var(--off-white);
+  }
+  .proxy-opt input[type=radio]:checked + label {
+    border-color: var(--green-mid);
+    background: var(--teal-soft);
+  }
+  .proxy-opt label strong {
+    font-size: .82rem;
+    color: var(--green-deep);
+    font-family: 'Syne', sans-serif;
+  }
+  .proxy-opt label span {
+    font-size: .72rem;
+    color: var(--muted);
+    word-break: break-all;
+  }
+  .proxy-custom-row {
+    margin-top: 8px;
+    display: none;
+  }
+  .proxy-custom-row.visible { display: flex; gap: 8px; align-items: center; }
+  .proxy-custom-row input { flex: 1; }
+  .proxy-warn-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #fff8e1;
+    border-left: 3px solid #f6c90e;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-size: .78rem;
+    color: #7a5c00;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="white"><path d="M17.498 14.382c-.301-.15-1.767-.867-2.04-.966-.273-.101-.473-.15-.673.15-.197.295-.771.964-.944 1.162-.175.195-.349.21-.646.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.019-.465.13-.615.136-.135.301-.345.451-.523.146-.181.194-.301.297-.496.1-.21.049-.375-.025-.524-.075-.15-.672-1.62-.922-2.206-.24-.584-.487-.51-.672-.51-.172-.015-.371-.015-.571-.015-.2 0-.523.074-.797.359-.273.3-1.045 1.02-1.045 2.475s1.07 2.865 1.219 3.075c.149.195 2.105 3.195 5.1 4.485.714.3 1.27.48 1.704.629.714.227 1.365.195 1.88.121.574-.091 1.767-.721 2.016-1.426.255-.705.255-1.29.18-1.425-.074-.135-.27-.21-.57-.345z"/><path d="M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.334.101 11.893c0 2.096.549 4.14 1.595 5.945L0 24l6.335-1.652c1.746.943 3.71 1.444 5.71 1.447h.006c6.585 0 11.946-5.336 11.949-11.896 0-3.176-1.24-6.165-3.48-8.45zm-8.475 18.307h-.004c-1.774 0-3.513-.477-5.031-1.378l-.361-.214-3.741.975.998-3.648-.235-.374C2.46 15.105 1.98 13.532 1.98 11.893c0-5.58 4.571-10.12 10.194-10.12 2.726 0 5.28 1.058 7.206 2.975 1.926 1.916 2.991 4.464 2.989 7.158-.003 5.578-4.574 10.85-10.324 10.85z"/></svg>
+    </div>
+    <h1>WA <span>Blast</span></h1>
+    <div class="header-badge">Cloud API</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ① API Config -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <div>
+        <h2>API Configuration</h2>
+        <p>Meta WhatsApp Cloud API credentials</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="form-grid">
+        <div class="field">
+          <label>Access Token <span>(stored locally only)</span></label>
+          <input type="password" id="accessToken" placeholder="EAAxxxxxxx…">
+        </div>
+        <div class="field">
+          <label>Phone Number ID</label>
+          <input type="text" id="phoneNumberId" placeholder="1234567890">
+        </div>
+        <div class="field">
+          <label>Template Name</label>
+          <input type="text" id="templateName" placeholder="hello_world">
+        </div>
+        <div class="field">
+          <label>Language Code</label>
+          <input type="text" id="langCode" placeholder="en_US" value="en_US">
+        </div>
+      </div>
+
+      <!-- CORS Proxy Selector -->
+      <div class="proxy-section">
+        <div class="proxy-label-row">
+          <label>🌐 CORS Proxy <span style="font-weight:400;color:var(--muted)">(required when opening as a local file)</span></label>
+          <span class="proxy-status warn" id="proxyStatus">⚠ Local file — proxy needed</span>
+        </div>
+        <div class="proxy-options">
+          <div class="proxy-opt">
+            <input type="radio" name="proxyChoice" id="p1" value="https://corsproxy.io/?" checked>
+            <label for="p1">
+              <strong>corsproxy.io</strong>
+              <span>corsproxy.io/?{url}</span>
+            </label>
+          </div>
+          <div class="proxy-opt">
+            <input type="radio" name="proxyChoice" id="p2" value="https://api.allorigins.win/raw?url=">
+            <label for="p2">
+              <strong>allorigins.win</strong>
+              <span>allorigins.win/raw?url={url}</span>
+            </label>
+          </div>
+          <div class="proxy-opt">
+            <input type="radio" name="proxyChoice" id="p3" value="https://cors-anywhere.herokuapp.com/">
+            <label for="p3">
+              <strong>cors-anywhere</strong>
+              <span>herokuapp.com/…</span>
+            </label>
+          </div>
+          <div class="proxy-opt">
+            <input type="radio" name="proxyChoice" id="p4" value="none">
+            <label for="p4">
+              <strong>No proxy</strong>
+              <span>Direct (GitHub Pages / server)</span>
+            </label>
+          </div>
+          <div class="proxy-opt">
+            <input type="radio" name="proxyChoice" id="p5" value="custom">
+            <label for="p5">
+              <strong>Custom proxy</strong>
+              <span>Enter your own URL below</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="proxy-custom-row" id="customProxyRow">
+          <input type="text" id="customProxyUrl" placeholder="https://my-proxy.example.com/?url=">
+        </div>
+
+        <div class="proxy-warn-note" id="proxyWarnNote">
+          ⚠️ Public CORS proxies forward your request (including your access token) through a third-party server. For production use, host this file on <strong>GitHub Pages</strong> or your own server and select <em>No proxy</em> instead.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② Template Variables -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      </div>
+      <div>
+        <h2>Template Variables</h2>
+        <p>Configure dynamic values for your message template</p>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <!-- Var 1 -->
+      <div class="var-row">
+        <div class="var-badge">1</div>
+        <span style="font-size:.8rem;color:var(--green-deep);font-weight:500;white-space:nowrap;">Fixed value</span>
+        <input type="text" id="var1Value" placeholder="e.g. https://chat.whatsapp.com/…" class="var-value-input">
+      </div>
+
+      <!-- Var 2 -->
+      <div class="var-row" style="flex-wrap:wrap;gap:10px;">
+        <div class="var-badge">2</div>
+        <span style="font-size:.8rem;color:var(--green-deep);font-weight:500;white-space:nowrap;">Source</span>
+        <div class="var-type-toggle">
+          <input type="radio" name="var2type" id="v2fixed" value="fixed">
+          <label for="v2fixed">Fixed</label>
+          <input type="radio" name="var2type" id="v2excel" value="excel" checked>
+          <label for="v2excel">From Excel column</label>
+        </div>
+        <div id="var2FixedWrap" style="display:none;flex:1;">
+          <input type="text" id="var2FixedVal" placeholder="Fixed value for {{2}}">
+        </div>
+        <div id="var2ExcelHint" class="var-excel-hint" style="flex:1;">
+          📋 Will be pulled from the Name column of your Excel file
+        </div>
+      </div>
+
+      <div class="info-note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        Variables match your template's <code style="font-size:.8em;background:rgba(18,140,126,.1);padding:1px 5px;border-radius:4px;">{{1}}</code>, <code style="font-size:.8em;background:rgba(18,140,126,.1);padding:1px 5px;border-radius:4px;">{{2}}</code> placeholders. Leave blank to send templates with no body variables.
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ Upload & Map -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div>
+        <h2>Upload Contacts</h2>
+        <p>Excel (.xlsx, .xls) or CSV file</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+        <div class="upload-icon">📂</div>
+        <h3 id="uploadLabel">Drop your file here or click to browse</h3>
+        <p>Supports .xlsx, .xls, .csv formats</p>
+      </div>
+
+      <div id="mappingSection" style="display:none;">
+        <div class="mapping-grid">
+          <div class="field">
+            <label>Name Column</label>
+            <select id="nameCol"></select>
+          </div>
+          <div class="field">
+            <label>Phone Number Column</label>
+            <select id="phoneCol"></select>
+          </div>
+        </div>
+        <div class="preview-wrap" id="previewWrap"></div>
+        <p class="contact-count" id="contactCount"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ Send -->
+  <button class="send-btn" id="sendBtn" onclick="startSending()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    Send Messages
+  </button>
+
+  <!-- ⑤ Progress -->
+  <div class="card progress-card" id="progressCard">
+    <div class="card-header">
+      <div class="card-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div>
+        <h2>Sending Progress</h2>
+        <p id="progressSubtitle">Preparing…</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-label">
+        <span id="progressText">0 / 0 sent</span>
+        <span id="progressPct">0%</span>
+      </div>
+      <div class="log-list" id="logList"></div>
+      <div class="summary-row" id="summaryRow" style="display:none;">
+        <div class="summary-pill s">
+          <strong id="sumSuccess">0</strong>
+          <span>✓ Delivered</span>
+        </div>
+        <div class="summary-pill f">
+          <strong id="sumFail">0</strong>
+          <span>✗ Failed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─── State ────────────────────────────────────────────────────
+let contacts = [];
+let headers  = [];
+let rawRows  = [];
+
+// ─── Proxy selector logic ─────────────────────────────────────
+const META_BASE = 'https://graph.facebook.com/v19.0';
+
+function getProxyPrefix() {
+  const chosen = document.querySelector('input[name="proxyChoice"]:checked').value;
+  if (chosen === 'none')   return '';
+  if (chosen === 'custom') return document.getElementById('customProxyUrl').value.trim();
+  return chosen;
+}
+
+function buildUrl(pnId) {
+  const target = `${META_BASE}/${pnId}/messages`;
+  const prefix = getProxyPrefix();
+  return prefix ? prefix + encodeURIComponent(target) : target;
+}
+
+// Show/hide custom proxy input & warning note
+document.querySelectorAll('input[name="proxyChoice"]').forEach(r => {
+  r.addEventListener('change', () => {
+    const v = document.querySelector('input[name="proxyChoice"]:checked').value;
+    document.getElementById('customProxyRow').classList.toggle('visible', v === 'custom');
+    document.getElementById('proxyWarnNote').style.display = v === 'none' ? 'none' : 'flex';
+    const statusEl = document.getElementById('proxyStatus');
+    if (v === 'none') {
+      statusEl.className = 'proxy-status ok';
+      statusEl.textContent = '✓ Direct — no proxy';
+    } else {
+      statusEl.className = 'proxy-status warn';
+      statusEl.textContent = '⚠ Via public proxy';
+    }
+  });
+});
+
+// Auto-detect if running from local file and hint user
+if (location.protocol === 'file:') {
+  document.getElementById('proxyStatus').textContent = '⚠ Local file — proxy active';
+} else {
+  // Hosted on a real origin — direct calls likely work
+  document.getElementById('p4').checked = true;
+  const statusEl = document.getElementById('proxyStatus');
+  statusEl.className = 'proxy-status ok';
+  statusEl.textContent = '✓ Hosted — no proxy needed';
+  document.getElementById('proxyWarnNote').style.display = 'none';
+}
+
+// ─── Var 2 toggle ────────────────────────────────────────────
+document.querySelectorAll('input[name="var2type"]').forEach(r => {
+  r.addEventListener('change', () => {
+    const isFixed = document.getElementById('v2fixed').checked;
+    document.getElementById('var2FixedWrap').style.display = isFixed ? 'flex' : 'none';
+    document.getElementById('var2ExcelHint').style.display  = isFixed ? 'none'  : 'flex';
+  });
+});
+
+// ─── File upload ─────────────────────────────────────────────
+const fileInput  = document.getElementById('fileInput');
+const uploadZone = document.getElementById('uploadZone');
+
+uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', ()=> uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) handleFile(e.target.files[0]);
+});
+
+function handleFile(file) {
+  document.getElementById('uploadLabel').textContent = '📄 ' + file.name;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = new Uint8Array(ev.target.result);
+    const wb   = XLSX.read(data, { type: 'array' });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    rawRows    = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+    if (rawRows.length < 2) { alert('File appears to be empty.'); return; }
+    headers = rawRows[0].map(String);
+
+    populateSelect('nameCol',  headers, guessCol(headers, ['name','nama','full']));
+    populateSelect('phoneCol', headers, guessCol(headers, ['phone','mobile','number','tel','wa','whatsapp','hp']));
+
+    document.getElementById('mappingSection').style.display = 'block';
+    updatePreview();
+
+    document.getElementById('nameCol').addEventListener('change',  updatePreview);
+    document.getElementById('phoneCol').addEventListener('change', updatePreview);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function guessCol(cols, keywords) {
+  const idx = cols.findIndex(c => keywords.some(k => c.toLowerCase().includes(k)));
+  return idx >= 0 ? idx : 0;
+}
+
+function populateSelect(id, cols, defaultIdx) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  cols.forEach((c, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = c || `Column ${i+1}`;
+    sel.appendChild(o);
+  });
+  sel.value = defaultIdx;
+}
+
+function updatePreview() {
+  const nIdx = parseInt(document.getElementById('nameCol').value);
+  const pIdx = parseInt(document.getElementById('phoneCol').value);
+
+  contacts = rawRows.slice(1)
+    .filter(r => r[pIdx] && String(r[pIdx]).trim())
+    .map(r => ({
+      name:  String(r[nIdx] || '').trim(),
+      phone: sanitizePhone(String(r[pIdx]).trim())
+    }));
+
+  const wrap = document.getElementById('previewWrap');
+  if (!contacts.length) { wrap.innerHTML = '<p style="padding:14px;color:var(--muted);font-size:.82rem;">No valid rows found.</p>'; return; }
+
+  let html = '<table><thead><tr><th>#</th><th>' + (headers[nIdx]||'Name') + '</th><th>' + (headers[pIdx]||'Phone') + '</th></tr></thead><tbody>';
+  contacts.slice(0, 50).forEach((c, i) => {
+    html += `<tr><td>${i+1}</td><td>${esc(c.name)}</td><td>${esc(c.phone)}</td></tr>`;
+  });
+  if (contacts.length > 50) html += `<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:10px;">…and ${contacts.length-50} more</td></tr>`;
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  document.getElementById('contactCount').textContent = `✓ ${contacts.length} contacts loaded`;
+}
+
+function sanitizePhone(p) {
+  // Remove spaces, dashes, parens; ensure starts with +
+  let d = p.replace(/[\s\-().]/g, '');
+  if (!d.startsWith('+')) d = '+' + d;
+  return d;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Sending ─────────────────────────────────────────────────
+async function startSending() {
+  const token    = document.getElementById('accessToken').value.trim();
+  const pnId     = document.getElementById('phoneNumberId').value.trim();
+  const tplName  = document.getElementById('templateName').value.trim();
+  const lang     = document.getElementById('langCode').value.trim() || 'en_US';
+  const var1     = document.getElementById('var1Value').value.trim();
+  const var2type = document.querySelector('input[name="var2type"]:checked').value;
+  const var2fixed= document.getElementById('var2FixedVal').value.trim();
+
+  if (!token)   { alert('Please enter your Access Token.'); return; }
+  if (!pnId)    { alert('Please enter your Phone Number ID.'); return; }
+  if (!tplName) { alert('Please enter a Template Name.'); return; }
+  if (!contacts.length) { alert('Please upload a contacts file first.'); return; }
+
+  // Show progress card
+  const card = document.getElementById('progressCard');
+  card.classList.add('active');
+  card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  document.getElementById('summaryRow').style.display = 'none';
+  document.getElementById('logList').innerHTML = '';
+  document.getElementById('sendBtn').disabled = true;
+
+  const total = contacts.length;
+  let success = 0, fail = 0;
+
+  for (let i = 0; i < total; i++) {
+    const c = contacts[i];
+    const v2val = var2type === 'excel' ? c.name : var2fixed;
+
+    updateProgress(i, total, `Sending to ${c.name || c.phone}…`);
+    addLog(c, 'pending', `Sending to ${c.name} (${c.phone})…`);
+
+    try {
+      const body    = buildPayload(tplName, lang, c.phone, var1, v2val);
+      const fetchUrl = buildUrl(pnId);
+      const res  = await fetch(fetchUrl, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+      const json = await res.json();
+      if (res.ok && json.messages) {
+        success++;
+        updateLastLog(c, 'success', `✓ Sent to ${c.name} (${c.phone})`);
+      } else {
+        fail++;
+        const errMsg = json.error?.message || JSON.stringify(json);
+        updateLastLog(c, 'fail', `✗ ${c.name} (${c.phone}) — ${errMsg}`);
+      }
+    } catch(err) {
+      fail++;
+      updateLastLog(c, 'fail', `✗ ${c.name} (${c.phone}) — ${err.message}`);
+    }
+
+    updateProgress(i + 1, total, `${i+1} of ${total} processed`);
+    if (i < total - 1) await sleep(1000);
+  }
+
+  // Final
+  updateProgress(total, total, 'Done!');
+  document.getElementById('sumSuccess').textContent = success;
+  document.getElementById('sumFail').textContent    = fail;
+  document.getElementById('summaryRow').style.display = 'flex';
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function buildPayload(tplName, lang, to, var1, var2) {
+  const components = [];
+
+  const params = [];
+  if (var1) params.push({ type: 'text', text: var1 });
+  if (var2) params.push({ type: 'text', text: var2 });
+
+  if (params.length) {
+    components.push({ type: 'body', parameters: params });
+  }
+
+  return {
+    messaging_product: 'whatsapp',
+    to: to,
+    type: 'template',
+    template: {
+      name: tplName,
+      language: { code: lang },
+      components: components.length ? components : undefined
+    }
+  };
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── Progress helpers ─────────────────────────────────────────
+let lastLogItem = null;
+
+function updateProgress(done, total, subtitle) {
+  const pct = Math.round((done / total) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${done} / ${total} sent`;
+  document.getElementById('progressPct').textContent  = pct + '%';
+  document.getElementById('progressSubtitle').textContent = subtitle;
+}
+
+function addLog(c, type, msg) {
+  const list = document.getElementById('logList');
+  const el = document.createElement('div');
+  el.className = `log-item ${type}`;
+  el.dataset.phone = c.phone;
+  el.innerHTML = `<div class="log-dot"></div><span>${esc(msg)}</span>`;
+  list.appendChild(el);
+  list.scrollTop = list.scrollHeight;
+  lastLogItem = el;
+}
+
+function updateLastLog(c, type, msg) {
+  if (!lastLogItem) return;
+  lastLogItem.className = `log-item ${type}`;
+  lastLogItem.innerHTML = `<div class="log-dot"></div><span>${esc(msg)}</span>`;
+}
+</script>
+</body>
+</html>
